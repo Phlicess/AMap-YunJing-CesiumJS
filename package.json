@@ -1,0 +1,26 @@
+{
+  "name": "amap-yunjing-cesiumjs",
+  "version": "1.0.0",
+  "description": "云镜给CesiumJS 实现的高斯渲染插件",
+  "main": "dist/yunjing-for-cesium-cjs.js",
+  "module": "dist/yunjing-for-cesium-es.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Phlicess/AMap-YunJing-CesiumJS.git"
+  },
+  "keywords": [
+    "云境",
+    "CesiumJS",
+    "3d",
+    "gaussian"
+  ],
+  "author": "Phlicess",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Phlicess/AMap-YunJing-CesiumJS/issues"
+  },
+  "homepage": "https://github.com/Phlicess/AMap-YunJing-CesiumJS#readme"
+}
