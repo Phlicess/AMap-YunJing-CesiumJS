@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<!-- saved from url=(0031)https://antimatter15.com/splat/ -->
+<html lang="en" dir="ltr">
+
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <meta http-equiv="Cache-Control" content="no-store" />
+    <title>高德 AI 三维重建</title>
+
+    <meta name="viewport"
+        content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <style>
+        .cesium-viewer-bottom,
+        .cesium-viewer-selectionIndicatorContainer,
+        .cesium-viewer-infoBoxContainer,
+        .cesium-viewer-toolbar,
+        .cesium-viewer-animationContainer,
+        .cesium-viewer-timelineContainer {
+            display: none !important;
+        }
+
+        body {
+            overflow: hidden;
+            margin: 0;
+            height: 100vh;
+            width: 100vw;
+            font-family: sans-serif;
+            background: black;
+            color: white;
+            text-shadow: 0 0 3px black;
+        }
+
+        #info {
+            z-index: 100;
+            position: absolute;
+            top: 10px;
+            left: 15px;
+        }
+
+        h3 {
+            margin: 5px 0;
+        }
+
+        #cesiumContainer {
+            width: 100%;
+            left: 100%;
+            height: 100%;
+        }
+
+        canvas {
+            /* filter: saturate(1.6); */
+        }
+
+        #target {
+            width: 0px;
+            height: 0px;
+            border: 1px solid red;
+            position: fixed;
+            left: 50%;
+            top: 50%;
+            z-index: 100000;
+        }
+
+        #fps {
+            /* display: none; */
+            position: fixed;
+            color: green;
+            top: 10px;
+            font-weight: 600;
+            right: 10px;
+            z-index: 100;
+        }
+
+        #target {
+            width: 0px;
+            height: 0px;
+            border: 1px solid red;
+            position: fixed;
+            left: 50%;
+            top: 50%;
+            z-index: 100000;
+        }
+
+        #buttons {
+            position: fixed;
+            right: 40px;
+            bottom: 10px;
+            display: flex;
+            flex-direction: row;
+            z-index: 10000;
+        }
+
+        #levels {
+            position: fixed;
+            right: 40px;
+            bottom: 100px;
+            display: flex;
+            flex-direction: column;
+            z-index: 10000;
+        }
+
+        .animate {
+            cursor: pointer;
+            margin: 3px 5px;
+            padding: 2px 10px;
+            border-radius: 5px;
+            border: 1px solid white;
+            background-color: rgba(255, 255, 255, 0.3);
+            text-shadow: 1px 1px 1px black;
+            color: white;
+            text-align: center;
+        }
+
+        .info {
+            font-family: '微软雅黑';
+            position: absolute;
+            border: solid 4px #00ffff;
+            padding: 6px 12px;
+            background-color: rgba(0, 100, 100, 0.3);
+            border-radius: 15px;
+            width: 400px;
+            height: 135px;
+            margin-left: 320px;
+            margin-top: -150px;
+            pointer-events: none;
+            box-shadow: 0 0 5px 1px #0ff;
+        }
+
+        .title {
+            color: #ffffff;
+            font-size: 36px;
+            font-weight: 800;
+            margin-bottom: 2px;
+        }
+
+        .content {
+            font-size: 30px;
+            font-weight: 500;
+        }
+
+        .arrow {
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            top: 135px;
+            left: -334px;
+            color: #00ffff;
+            text-shadow: none;
+            border: none;
+            background-color: #0ff;
+            box-shadow: 0px 0px 10px 5px;
+        }
+
+        polyline {
+            fill: none;
+            stroke: #00ffff;
+            stroke-width: 5;
+        }
+
+        #yunjinglogo {
+            display: none;
+        }
+
+        #settings {
+            background-color: rgba(255, 255, 255, 0.5);
+            padding: 10px;
+        }
+
+        #cover {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-content: center;
+            justify-content: center;
+            align-items: center;
+            position: fixed;
+            z-index: 100000000;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="cover">Loading...</div>
+    <div id="info">
+        <div id="fps"></div>
+    </div>
+
+    <div id="buttons">
+        <span class="animate" id="stop" onclick="start(true)">漫游</span>
+        <span class="animate" id="pause" onclick="pause(true)">暂停</span>
+        <span class="animate" id="stop" onclick="stop(true)">停止</span>
+    </div>
+    <div id="levels">
+        <span class="animate" id="stop" onclick="openMeasure()">开启测量</span>
+        <span class="animate" id="stop" onclick="closeMeasure()">关闭测量</span>
+        <span class="animate" id="" onclick="level3()">三层</span>
+        <span class="animate" id="" onclick="level4()">四层</span>
+    </div>
+
+    <script>
+        let frames = [];
+        let lastTime = new Date().getTime();
+        const count = 30;
+        const fpsdiv = document.getElementById('fps');
+        const updateFPS = () => {
+            const curTime = new Date().getTime();
+            frames.push(curTime - lastTime);
+            frames = frames.slice(Math.max(0, frames.length - count));
+            let t = 0;
+            frames.forEach((f) => {
+                t += f;
+            });
+            const fps = t / count;
+            fpsdiv.innerHTML = Math.round(1000 / fps) + ' FPS';
+            lastTime = curTime;
+            requestAnimationFrame(updateFPS);
+        };
+        requestAnimationFrame(updateFPS);
+
+        window.addEventListener('unload', function () {
+            // 这个空的 unload 事件监听器告诉浏览器不要保留页面在 bfcache 中
+        });
+        function changeNear() {
+            viewer.scene.camera.frustum.near = document.getElementById('near').value / 10;
+        }
+    </script>
+    <!-- <script src="../Cesium119/Cesium.js"></script> -->
+    <script src="https://cesium.com/downloads/cesiumjs/releases/1.117/Build/Cesium/Cesium.js"></script>
+    <link href="https://cesium.com/downloads/cesiumjs/releases/1.117/Build/Cesium/Widgets/widgets.css"
+        rel="stylesheet" />
+    <script src="../dist/yunjing-for-cesium.js"></script>
+    <div id="target"></div>
+    <div id="cesiumContainer">
+        <svg id="svg" style="pointer-events: none; position: absolute" width="983" height="748"></svg>
+    </div>
+    <script type="module">
+        import route3 from './routes/yuhuage-L3.js';
+        import route4 from './routes/yuhuage-L4.js';
+        const { YunJingLayer, FirstPersonInteraction, AMapSatelliteLayer } = YunJing;
+        let vertexArray;
+        Cesium.Ion.defaultAccessToken =
+            'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiJiOTc2ZjMxYS1jZjQ3LTQ5MmMtYWFiNi02NWY0YmNhZDg1NTIiLCJpZCI6MTY3MzE2LCJpYXQiOjE2OTUxMjAzMDN9.Drgs8wNoMKlckj0GXIlqL7YqutTW1XnguRdQupw0-3I';
+        const viewer = new Cesium.Viewer('cesiumContainer', {
+            // requestRenderMode: true,
+            // maximumRenderTimeChange: Infinity,
+            // baseLayer: new AMapSatelliteLayer(),
+            contextOptions: {
+                webgl: {
+                    logarithmicDepthBuffer: false,
+                },
+                requestWebgl2: true,
+                scene3DOnly: true,
+            },
+        });
+
+        viewer.resolutionScale = Math.min(window.devicePixelRatio, 2.0);
+        viewer.scene.camera.frustum.near = 0.1;
+        const cameraPos = Cesium.Cartesian3.fromDegrees(120.00000014594748, 40.00000257493297, 800);
+        viewer.scene.postProcessStages.fxaa.enabled = true;
+
+        viewer.camera.setView({
+            destination: cameraPos,
+            orientation: {
+                heading: Cesium.Math.toRadians(359),
+                pitch: Cesium.Math.toRadians(0),
+                roll: 0,
+            },
+        });
+        viewer.scene.globe.depthTestAgainstTerrain = true;
+        // viewer.scene.globe.depthTestAgainstTerrain = false;
+        // viewer.scene.globe.enableTerrainDetection = false;
+        viewer.scene.globe.show = true;
+        viewer.scene.skyAtmosphere.show = false;
+        viewer.scene.skyBox.show = false;
+        viewer.camera.frustum.fov = Math.PI * 0.5;
+
+        const yunjing = new YunJingLayer({
+            url: '../data/yuhuage/L34-noLOD-new.json',
+            viewer,
+            // maxRange: 2,
+            // minRange: 1,
+            depthTest: true,
+        });
+        window.yunjing = yunjing
+        yunjing.hide()
+        yunjing.preLoad(undefined, undefined, () => {
+            yunjing.show();
+            setTimeout(() => {
+                document.body.removeChild(document.getElementById('cover'));
+            });
+        });
+        window.interaction = new FirstPersonInteraction({
+            viewer,
+            yunjingLayer: yunjing,
+            fixSpeedByHeight: false,
+            speed: 0.5,
+            isIndoor: true,
+        });
+        interaction.open();
+        const tool = new YunJing.RangingTool(viewer, {
+            unit: 'mm',
+            precision: 1,
+        });
+        // tool.distance();
+
+        let animation;
+        let pausedTime;
+        window.start = () => {
+            closeMeasure();
+            if (animation) {
+                animation.stop();
+                document.getElementById('pause').innerHTML = '暂停';
+            }
+            animation = new YunJing.CameraAnimation({
+                viewer,
+                path: new YunJing.CameraAnimationPath(currentLevel == 3 ? route3 : route4, 0.2, 10),
+                onEnd: (a) => {
+                    console.log('end', a);
+                },
+                onReachNode: (a) => {
+                    console.log('onReachNode', a);
+                },
+            });
+            animation.start();
+        };
+        window.pause = () => {
+            if (document.getElementById('pause').innerHTML == '继续') {
+                animation.resume(pausedTime);
+                closeMeasure();
+                document.getElementById('pause').innerHTML = '暂停';
+            } else {
+                pausedTime = animation.pause();
+                document.getElementById('pause').innerHTML = '继续';
+            }
+        };
+        window.stop = () => {
+            animation.stop();
+            document.getElementById('pause').innerHTML = '暂停';
+        };
+        const centers = {
+            3: Cesium.Cartesian3.fromDegrees(120.00000418415972, 39.999995930506664, 1.6159463837067065),
+            4: Cesium.Cartesian3.fromDegrees(120.00000021130343, 40.000007866924406, 8),
+        };
+        let currentLevel = 4;
+        window.level3 = () => {
+            currentLevel = 3;
+            viewer.camera.setView({
+                destination: centers[3],
+                orientation: {
+                    heading: Cesium.Math.toRadians(359),
+                    pitch: Cesium.Math.toRadians(0),
+                    roll: 0,
+                },
+            });
+        };
+        window.level4 = () => {
+            currentLevel = 4;
+            viewer.camera.setView({
+                destination: centers[4],
+                orientation: {
+                    heading: Cesium.Math.toRadians(1.1),
+                    pitch: Cesium.Math.toRadians(0),
+                    roll: 0,
+                },
+            });
+        };
+        level3()
+        window.openMeasure = () => {
+            yunjing.depthTest = true;
+            tool.distance();
+        };
+        window.closeMeasure = () => {
+            yunjing.depthTest = false;
+            tool.stop(true);
+        };
+    </script>
+</body>
+
+</html>

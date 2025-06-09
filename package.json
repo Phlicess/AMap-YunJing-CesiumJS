@@ -1,6 +1,6 @@
 {
   "name": "amap-yunjing-cesiumjs",
-  "version": "1.0.6",
+  "version": "1.0.7",
   "description": "云镜给CesiumJS 实现的高斯渲染插件",
   "main": "dist/yunjing-for-cesium-cjs.js",
   "module": "dist/yunjing-for-cesium-es.js",
